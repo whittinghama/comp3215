@@ -37,6 +37,10 @@
 
 #include "openthread-system.h"
 
+#include "includes/led.h"
+#include "includes/peripherals.h"
+#include "includes/MKW41Z4.h"
+
 #if OPENTHREAD_EXAMPLES_POSIX
 #include <setjmp.h>
 #include <unistd.h>
@@ -66,6 +70,8 @@ void otTaskletsSignalPending(otInstance *aInstance)
 int main(int argc, char *argv[])
 {
     otInstance *instance;
+    LED_Initialize();
+    LED_On(0); // Debug status 0
 
 #if OPENTHREAD_EXAMPLES_POSIX
     if (setjmp(gResetJump))
@@ -86,6 +92,8 @@ int main(int argc, char *argv[])
 pseudo_reset:
 
     otSysInit(argc, argv);
+    LED_Off(0);
+    LED_On(1); // Debug status 1
 
 #if OPENTHREAD_CONFIG_MULTIPLE_INSTANCE_ENABLE
     // Call to query the buffer size
@@ -104,10 +112,15 @@ pseudo_reset:
 
     otCliUartInit(instance);
 
+    LED_Off(1);
+    LED_On(2); // Debug status 2
+
     while (!otSysPseudoResetWasRequested())
     {
         otTaskletsProcess(instance);
         otSysProcessDrivers(instance);
+        LED_On(0);
+        LED_On(1); //Debug status 3
     }
 
     otInstanceFinalize(instance);
