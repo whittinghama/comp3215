@@ -39,10 +39,16 @@
 #include <openthread/thread.h>
 #include <openthread/thread_ftd.h>
 #include <openthread/ip6.h>
+#include <openthread/udp.h>
+#include <openthread/message.h>
 
 #include "openthread-system.h"
 
+// #define UDP_PORT 5569
+// static const char UDP_CAST[] = "ff03::1";
+
 void handleNetifStateChanged(uint32_t aFlags, void *aContext);
+void testString(int argc, char *argv[]); // UART test function: pings static string to terminal
 
 #if OPENTHREAD_EXAMPLES_POSIX
 #include <setjmp.h>
@@ -116,9 +122,12 @@ pseudo_reset:
     otThreadSetEnabled(instance,true);
 
     otCliUartInit(instance);
+    const struct otCliCommand testcommands[] = {
+      {"testString",&testString},
+    };
+    otCliSetUserCommands(testcommands,1);
 
     otSetStateChangedCallback(instance, handleNetifStateChanged, instance);
-    otSysLEDSet(3,true);
 
     while (!otSysPseudoResetWasRequested())
     {
@@ -142,7 +151,7 @@ void handleNetifStateChanged(uint32_t aFlags, void *aContext){
 
     switch(changedRole){
       case OT_DEVICE_ROLE_LEADER:
-        otSysLEDSet(0,true);
+        otSysLEDSet(0,false);
         otSysLEDSet(1,true);
         otSysLEDSet(2,true);
         break;
@@ -168,6 +177,13 @@ void handleNetifStateChanged(uint32_t aFlags, void *aContext){
         break;
     }
   }
+}
+
+void testString(int argc, char *argv[]){
+  OT_UNUSED_VARIABLE(argc);
+  OT_UNUSED_VARIABLE(argv);
+  const char *teststring = "test_response";
+  otCliOutput(teststring,sizeof(teststring));
 }
 
 /*
