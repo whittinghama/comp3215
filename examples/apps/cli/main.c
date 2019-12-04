@@ -27,6 +27,7 @@
  */
 
 #include <assert.h>
+#include <string.h>
 #include <openthread-core-config.h>
 #include <openthread/config.h>
 
@@ -43,14 +44,27 @@
 #include <openthread/message.h>
 
 #include "openthread-system.h"
+#include "utils/code_utils.h"
 
-// #define UDP_PORT 5569
-// static const char UDP_CAST[] = "ff03::1";
+#define UDP_PORT 5569
+static const char UDP_MULTICAST[] = "ff03::1";
 
-void handleNetifStateChanged(uint32_t aFlags, void *aContext);
-void testString(int argc, char *argv[]); // UART test function: pings static string to terminal
-int getLEDnum(void);
+void handleNetifStateChanged(uint32_t aFlags, void *aContext); // Board function to control RGB Thread state LED
+void handleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo); // Board function to handling UDP receive
+static void initUdp(otInstance *aInstance);
+static void sendUdp(otInstance *aInstance, otIp6Address destIp, char *messageString);
+
+static otUdpSocket sUdpSocket;
+otInstance *instance;
+
 void sendLEDnum(int argc, char *argv[]); // UART test function: returns LED number as set by GPIO
+
+int getLEDnum(void); // Board function to determine which LED number this board is set to
+// void connectCheck(int argc, char *argv[]); // Server startup command for server to check what LEDs are connected
+void ledOn(int argc, char *argv[]); // Server command to turn an LED on
+void ledOff(int argc, char *argv[]); // Server command to turn an LED off
+// void sendAck(void); // Board function to send acknowledgement back to message sender once LED request has been handled
+// void recvAck(void); // Board funtion to receive acknowledgement and relay to server
 
 #if OPENTHREAD_EXAMPLES_POSIX
 #include <setjmp.h>
@@ -80,7 +94,7 @@ void otTaskletsSignalPending(otInstance *aInstance)
 
 int main(int argc, char *argv[])
 {
-    otInstance *instance;
+
 
 #if OPENTHREAD_EXAMPLES_POSIX
     if (setjmp(gResetJump))
@@ -119,6 +133,7 @@ pseudo_reset:
 
     otSysLEDInit();
     otSysPinsInit();
+    initUdp(instance);
 
     otLinkSetPanId(instance,0xa420);
     otIp6SetEnabled(instance,true);
@@ -126,10 +141,11 @@ pseudo_reset:
 
     otCliUartInit(instance);
     const struct otCliCommand testcommands[] = {
-      {"testString",&testString},
       {"getLED",&sendLEDnum},
+      {"ledOn",&ledOn},
+      {"ledOff",&ledOff},
     };
-    otCliSetUserCommands(testcommands,2);
+    otCliSetUserCommands(testcommands,3);
 
     otSetStateChangedCallback(instance, handleNetifStateChanged, instance);
 
@@ -183,18 +199,70 @@ void handleNetifStateChanged(uint32_t aFlags, void *aContext){
   }
 }
 
-void testString(int argc, char *argv[]){
-  OT_UNUSED_VARIABLE(argc);
-  OT_UNUSED_VARIABLE(argv);
-  const char *teststring = "testresponse\n";
-  otCliOutput(teststring,sizeof(teststring));
+void handleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo){
+  OT_UNUSED_VARIABLE(aContext);
+  OT_UNUSED_VARIABLE(aMessageInfo); //temp
+  char recvBuffer[20];
+  // otIp6Address sender = aMessageInfo->mPeerAddr;
+  otMessageRead(aMessage,otMessageGetOffset(aMessage),recvBuffer,sizeof(recvBuffer));
+  otCliOutputFormat("Received something \n\r");
+
+  if(strncmp(recvBuffer,"connectcheck",12) == 0){
+
+  }
+  else if(strncmp(recvBuffer,"ledon",5) == 0){
+    otSysLEDSet(3,true);
+  }
+  else if(strncmp(recvBuffer,"ledoff",6) == 0){
+    otSysLEDSet(3,false);
+  }
+  else if(strncmp(recvBuffer,"ack",3) == 0){
+
+  }
+}
+
+void initUdp(otInstance *aInstance){
+  otSockAddr listenSockAddr;
+
+  memset(&sUdpSocket, 0, sizeof(sUdpSocket));
+  memset(&listenSockAddr, 0, sizeof(listenSockAddr));
+
+  listenSockAddr.mPort = UDP_PORT;
+
+  otUdpOpen(aInstance, &sUdpSocket, handleUdpReceive, aInstance);
+  otUdpBind(&sUdpSocket, &listenSockAddr);
+}
+
+void sendUdp(otInstance *aInstance, otIp6Address destIp, char *messageString){
+  otError error = OT_ERROR_NONE;
+  otMessage *message = NULL;
+  otMessageInfo messageInfo;
+
+  memset(&messageInfo, 0, sizeof(messageInfo));
+
+  messageInfo.mPeerAddr = destIp;
+  messageInfo.mPeerPort = UDP_PORT;
+
+  message = otUdpNewMessage(aInstance, NULL);
+  otEXPECT_ACTION(message != NULL, error = OT_ERROR_NO_BUFS);
+
+  error = otMessageAppend(message, messageString, sizeof(messageString));
+  otEXPECT(error == OT_ERROR_NONE);
+
+  error = otUdpSend(&sUdpSocket, message, &messageInfo);
+
+exit:
+  if(error != OT_ERROR_NONE && message != NULL){
+    otMessageFree(message);
+  }
+  otCliOutputFormat("Sent something \n\r");
 }
 
 void sendLEDnum(int argc, char *argv[]){
   OT_UNUSED_VARIABLE(argc);
   OT_UNUSED_VARIABLE(argv);
   otCliOutputFormat(
-    "LED NUM: %d\n", getLEDnum()
+    "LED NUM: %d \n\r", getLEDnum()
   );
 }
 
@@ -208,6 +276,34 @@ int getLEDnum(void){
   }
   return num;
 }
+
+// void connectCheck(int argc, char *argv[]){
+//
+// }
+
+void ledOn(int argc, char *argv[]){
+  OT_UNUSED_VARIABLE(argc);
+  OT_UNUSED_VARIABLE(argv);
+  otIp6Address destAddr;
+  otIp6AddressFromString(UDP_MULTICAST, &destAddr);
+  sendUdp(instance, destAddr, "ledon");
+}
+
+void ledOff(int argc, char *argv[]){
+  OT_UNUSED_VARIABLE(argc);
+  OT_UNUSED_VARIABLE(argv);
+  otIp6Address destAddr;
+  otIp6AddressFromString(UDP_MULTICAST, &destAddr);
+  sendUdp(instance, destAddr, "ledoff");
+}
+
+// void sendAck(void){
+//
+// }
+//
+// void recvAck(void){
+//
+// }
 
 /*
  * Provide, if required an "otPlatLog()" function
