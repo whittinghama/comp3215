@@ -11,6 +11,7 @@
 // Drivers for KW41Z functions
 #include <board/MKW41Z4.h>
 #include <board/LED.h>
+#include <board/GPIO.h>
 #include <board/fsl_gpio.h>
 #include <board/fsl_common.h>
 
@@ -31,4 +32,12 @@ void otSysLEDSet(uint32_t nLed, bool ledon){
   else{
     LED_Off(nLed);
   }
+}
+
+void otSysPinsInit(void){
+  GPIO_Initialize();
+}
+
+uint32_t otSysPinsRead(uint8_t pin_no){
+  return getPinState(pin_no);
 }

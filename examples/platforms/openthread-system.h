@@ -96,8 +96,9 @@ extern void otSysEventSignalPending(void);
 // New function declarations for LED initialisation and handling
 
 void otSysLEDInit(void);
+void otSysPinsInit(void);
 void otSysLEDSet(uint32_t nLed, bool ledon);
-
+uint32_t otSysPinsRead(uint8_t pin_no);
 // Callback functions for GPIO interrupts
 
 // typedef void (*otSysButtonCallback)(otInstance *aInstance);

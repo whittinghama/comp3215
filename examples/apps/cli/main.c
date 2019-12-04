@@ -49,6 +49,8 @@
 
 void handleNetifStateChanged(uint32_t aFlags, void *aContext);
 void testString(int argc, char *argv[]); // UART test function: pings static string to terminal
+int getLEDnum(void);
+void sendLEDnum(int argc, char *argv[]); // UART test function: returns LED number as set by GPIO
 
 #if OPENTHREAD_EXAMPLES_POSIX
 #include <setjmp.h>
@@ -116,16 +118,18 @@ pseudo_reset:
     assert(instance);
 
     otSysLEDInit();
+    otSysPinsInit();
 
-    otLinkSetPanId(instance,0x4200);
+    otLinkSetPanId(instance,0xa420);
     otIp6SetEnabled(instance,true);
     otThreadSetEnabled(instance,true);
 
     otCliUartInit(instance);
     const struct otCliCommand testcommands[] = {
       {"testString",&testString},
+      {"getLED",&sendLEDnum},
     };
-    otCliSetUserCommands(testcommands,1);
+    otCliSetUserCommands(testcommands,2);
 
     otSetStateChangedCallback(instance, handleNetifStateChanged, instance);
 
@@ -182,8 +186,27 @@ void handleNetifStateChanged(uint32_t aFlags, void *aContext){
 void testString(int argc, char *argv[]){
   OT_UNUSED_VARIABLE(argc);
   OT_UNUSED_VARIABLE(argv);
-  const char *teststring = "test_response";
+  const char *teststring = "testresponse\n";
   otCliOutput(teststring,sizeof(teststring));
+}
+
+void sendLEDnum(int argc, char *argv[]){
+  OT_UNUSED_VARIABLE(argc);
+  OT_UNUSED_VARIABLE(argv);
+  otCliOutputFormat(
+    "LED NUM: %d\n", getLEDnum()
+  );
+}
+
+int getLEDnum(void){
+  int num = 0;
+  for(int i=1;i<=4;i++){
+    if(otSysPinsRead(i)==0){
+      num = i;
+      break;
+    }
+  }
+  return num;
 }
 
 /*
