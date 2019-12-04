@@ -61,6 +61,7 @@ PLATFORM_SOURCES                                                                
     radio.c                                                                                          \
     system.c                                                                                         \
     uart.c                                                                                           \
+src/gpio.c        \
     $(NULL)
 
 libopenthread_kw41z_a_SOURCES                                                                      = \

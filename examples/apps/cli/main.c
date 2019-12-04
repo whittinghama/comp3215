@@ -34,8 +34,15 @@
 #include <openthread/diag.h>
 #include <openthread/tasklet.h>
 #include <openthread/platform/logging.h>
+#include <openthread/platform/uart.h>
+#include <openthread/instance.h>
+#include <openthread/thread.h>
+#include <openthread/thread_ftd.h>
+#include <openthread/ip6.h>
 
 #include "openthread-system.h"
+
+void handleNetifStateChanged(uint32_t aFlags, void *aContext);
 
 #if OPENTHREAD_EXAMPLES_POSIX
 #include <setjmp.h>
@@ -102,7 +109,16 @@ pseudo_reset:
 #endif
     assert(instance);
 
+    otSysLEDInit();
+
+    otLinkSetPanId(instance,0x4200);
+    otIp6SetEnabled(instance,true);
+    otThreadSetEnabled(instance,true);
+
     otCliUartInit(instance);
+
+    otSetStateChangedCallback(instance, handleNetifStateChanged, instance);
+    otSysLEDSet(3,true);
 
     while (!otSysPseudoResetWasRequested())
     {
@@ -118,6 +134,40 @@ pseudo_reset:
     goto pseudo_reset;
 
     return 0;
+}
+
+void handleNetifStateChanged(uint32_t aFlags, void *aContext){
+  if ((aFlags & OT_CHANGED_THREAD_ROLE) != 0){
+    otDeviceRole changedRole = otThreadGetDeviceRole(aContext);
+
+    switch(changedRole){
+      case OT_DEVICE_ROLE_LEADER:
+        otSysLEDSet(0,true);
+        otSysLEDSet(1,true);
+        otSysLEDSet(2,true);
+        break;
+      case OT_DEVICE_ROLE_ROUTER:
+        otSysLEDSet(0,false);
+        otSysLEDSet(1,true);
+        otSysLEDSet(2,false);
+        break;
+      case OT_DEVICE_ROLE_CHILD:
+        otSysLEDSet(0,false);
+        otSysLEDSet(1,false);
+        otSysLEDSet(2,true);
+        break;
+      case OT_DEVICE_ROLE_DETACHED:
+        otSysLEDSet(0,true);
+        otSysLEDSet(1,false);
+        otSysLEDSet(2,false);
+        break;
+      case OT_DEVICE_ROLE_DISABLED:
+        otSysLEDSet(0,false);
+        otSysLEDSet(1,false);
+        otSysLEDSet(2,false);
+        break;
+    }
+  }
 }
 
 /*

@@ -93,6 +93,17 @@ void otSysProcessDrivers(otInstance *aInstance);
  */
 extern void otSysEventSignalPending(void);
 
+// New function declarations for LED initialisation and handling
+
+void otSysLEDInit(void);
+void otSysLEDSet(uint32_t nLed, bool ledon);
+
+// Callback functions for GPIO interrupts
+
+// typedef void (*otSysButtonCallback)(otInstance *aInstance);
+// void otSysButtonInit(otSysButtonCallback aCallback);
+// void otSysButtonProcess(otInstance *aInstance);
+
 #ifdef __cplusplus
 } // end of extern "C"
 #endif
