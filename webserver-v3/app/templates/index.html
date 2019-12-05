@@ -1,0 +1,236 @@
+<html>
+<head>
+	<title>COMP3215</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+	<link href='https://fonts.googleapis.com/css?family=Aclonica' rel='stylesheet'>
+	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+	<!-- FAVICON FROM https://favicon.io/ -->
+</head>
+  <body onload="initialise()">
+  	<button style ="float:right" class="button button3" onClick="window.location.reload();">Poll Network</button>
+    <h1>COMP3215</h1> 
+    <p>This is a simple webpage to control 4 LEDs</p>
+    <h6>The host and state of the LEDs can be seen below</h6>
+    <div class="row">
+  <div class="column">
+  	<h2 id="led1title" class= "small">LED1</h2>
+  	<h5 id = "led1message" class = "small offline"> Offline</h5>
+    <button id = "1,1" class="button button1" onclick="button_press(this.id)">ON</button>
+    <button id = "1,0" class="button button2" onclick="button_press(this.id)">OFF</button>
+    <h2 id="led3title" class="small">LED3</h2>
+    <h5 id = "led3message" class = "small offline"> Offline</h5>
+    <button id = "3,1" class="button button1" onclick="button_press(this.id)">ON</button>
+    <button id = "3,0" class="button button2" onclick="button_press(this.id)">OFF</button>
+  </div>
+  <div class="column">
+  	<h2 id="led2title" class="small">LED2</h2>
+  	<h5 id = "led2message" class = "small offline"> Offline</h5>
+    <button id = "2,1" class="button button1" onclick="button_press(this.id)">ON</button>
+    <button id = "2,0" class="button button2" onclick="button_press(this.id)">OFF</button>
+    <h2 id="led4title" class="small">LED4</h2>
+    <h5 id = "led4message" class = "small offline"> Offline</h5>
+    <button id = "4,1" class="button button1" onclick="button_press(this.id)">ON</button>
+    <button id = "4,0" class="button button2" onclick="button_press(this.id)">OFF</button>
+  </div>
+</div>
+    <h5 id="message"></h5>
+  </body>
+</html>
+<!-- button style adapted from https://www.w3schools.com/css/css3_buttons.asp -->
+<!-- column and row style from https://www.w3schools.com/howto/howto_css_two_columns.asp -->
+<!-- line height style from https://css-tricks.com/forums/topic/making-my-h1-and-h2-text-vertically-closer-to-one-another/ -->
+<style>
+
+body {
+	font-family: 'Aclonica';font-size: 22px;
+}
+
+h2.small {line-height: 20%}
+h5.small {line-height: 10%}
+h5.online{color: green;}
+h5.offline{color:#CA002A;}
+
+.button {
+  background-color: #4CAF50; /* Green */
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+}
+
+
+.button1 {
+  background-color: white; 
+  color: black; 
+  border: 2px solid #000000;
+}
+
+.button2 {
+  background-color: white; 
+  color: black; 
+  border: 2px solid #000000;
+}
+
+.button3 {
+  background-color: white; 
+  color: black; 
+  border: 2px solid #000000;
+}
+
+
+
+.button1:hover {
+  background-color: #9900CC;
+  color: white;
+}
+
+.button2:hover {
+  background-color: #CCCCFF;
+  color: white;
+}
+
+.button3:hover {
+  background-color: #657fc8;
+  color: white;
+}
+
+.column {
+  float: left;
+  width: 50%;
+}
+
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+
+</style>
+
+<script>
+	function initialise(){
+		if( {{ startup.host }} == "1"){
+			document.getElementById("led1title").innerHTML = "LED1: Host";
+			document.getElementById("led2title").innerHTML = "LED2";
+			document.getElementById("led3title").innerHTML = "LED3";
+			document.getElementById("led4title").innerHTML = "LED4";
+		}
+		if( {{ startup.host }} == "2"){
+			document.getElementById("led1title").innerHTML = "LED1";
+			document.getElementById("led2title").innerHTML = "LED2: Host";
+			document.getElementById("led3title").innerHTML = "LED3";
+			document.getElementById("led4title").innerHTML = "LED4";
+		}
+		if( {{ startup.host }} == "3"){
+			document.getElementById("led1title").innerHTML = "LED1";
+			document.getElementById("led2title").innerHTML = "LED2";
+			document.getElementById("led3title").innerHTML = "LED3: Host";
+			document.getElementById("led4title").innerHTML = "LED4";
+		}
+		if( {{ startup.host }} == "4"){
+			document.getElementById("led1title").innerHTML = "LED1";
+			document.getElementById("led2title").innerHTML = "LED2";
+			document.getElementById("led3title").innerHTML = "LED3";
+			document.getElementById("led4title").innerHTML = "LED4: Host";
+		}
+		set_states( {{ startup.startup_state|tojson|safe}} ); // so string doesn't get garbled https://stackoverflow.com/questions/36206305/javascript-computes-string-sent-from-flask-as-integers
+	}
+
+	function button_press(button_id){
+    document.getElementById("message").innerHTML = ""
+    var button_no_state = button_id.split(",");
+	//https://stackoverflow.com/questions/2894946/passing-javascript-variable-to-python
+	$.ajax(
+            {
+                type: "POST",
+                contentType:'application/json;charset-utf-08',
+                dataType:'json',
+                url:'http://localhost:5000/buttonpress?button_id='+ button_no_state[0] + "&button_state=" + button_no_state[1],
+                //url: 'http://peter.duffins.net/lighting/toggle_google_assistant.php?id=608',
+                success:function (data) {
+                    var reply=data.reply;
+                    var id=data.id;
+                    var state=data.state;
+                    var onlineoffline = data.onlineoffline;
+                    var host = data.host;
+                    if (reply=="success")
+                    {
+                        //document.getElementById("message").innerHTML = "You pressed button number: " + id + " with state " + state ;
+                        set_states(onlineoffline);
+                        if( host == "1"){
+							document.getElementById("led1title").innerHTML = "LED1: Host";
+							document.getElementById("led2title").innerHTML = "LED2";
+							document.getElementById("led3title").innerHTML = "LED3";
+							document.getElementById("led4title").innerHTML = "LED4";
+						}
+						if( host == "2"){
+							document.getElementById("led1title").innerHTML = "LED1";
+							document.getElementById("led2title").innerHTML = "LED2: Host";
+							document.getElementById("led3title").innerHTML = "LED3";
+							document.getElementById("led4title").innerHTML = "LED4";
+						}
+						if( host == "3"){
+							document.getElementById("led1title").innerHTML = "LED1";
+							document.getElementById("led2title").innerHTML = "LED2";
+							document.getElementById("led3title").innerHTML = "LED3: Host";
+							document.getElementById("led4title").innerHTML = "LED4";
+						}
+						if( host == "4"){
+							document.getElementById("led1title").innerHTML = "LED1";
+							document.getElementById("led2title").innerHTML = "LED2";
+							document.getElementById("led3title").innerHTML = "LED3";
+							document.getElementById("led4title").innerHTML = "LED4: Host";
+						}
+                    }
+                    else
+                        {
+                        document.getElementById("message").innerHTML = "error"
+                        alert("some error ocured in session agent")
+                        }
+
+                }
+            }
+        );
+	}
+
+	function set_states(onlineoffline){
+		//.className from https://stackoverflow.com/questions/195951/how-to-change-an-elements-class-with-javascript
+		if(onlineoffline[0] == 1){
+    	document.getElementById("led1message").className = "small online";
+    	document.getElementById("led1message").innerHTML = "Online";
+	    }
+	    else{
+	   		document.getElementById("led1message").className = "small offline";
+	    	document.getElementById("led1message").innerHTML = "Offline";
+	    }
+	   	if(onlineoffline[1] == 1){
+	    	document.getElementById("led2message").className = "small online";
+	    	document.getElementById("led2message").innerHTML = "Online";
+	    }
+	    else{
+	   		document.getElementById("led2message").className = "small offline";
+	    	document.getElementById("led2message").innerHTML = "Offline";
+	    }
+	    if(onlineoffline[2] == 1){
+	    	document.getElementById("led3message").className = "small online";
+	    	document.getElementById("led3message").innerHTML = "Online";
+	    }
+	    else{
+	   		document.getElementById("led3message").className = "small offline";
+	    	document.getElementById("led3message").innerHTML = "Offline";
+	    }
+	    if(onlineoffline[3] == 1){
+	    	document.getElementById("led4message").className = "small online";
+	    	document.getElementById("led4message").innerHTML = "Online";
+	    }
+	    else{
+	   		document.getElementById("led4message").className = "small offline";
+	    	document.getElementById("led4message").innerHTML = "Offline";
+	    }
+		}
+
+</script>
