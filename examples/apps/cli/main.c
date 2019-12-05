@@ -205,7 +205,7 @@ void handleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *
   char recvBuffer[20];
   // otIp6Address sender = aMessageInfo->mPeerAddr;
   otMessageRead(aMessage,otMessageGetOffset(aMessage),recvBuffer,sizeof(recvBuffer));
-  otCliOutputFormat("Received something \n\r");
+  otCliOutputFormat("Received: %s \n\r", recvBuffer);
 
   if(strncmp(recvBuffer,"connectcheck",12) == 0){
 
@@ -246,7 +246,7 @@ void sendUdp(otInstance *aInstance, otIp6Address destIp, char *messageString){
   message = otUdpNewMessage(aInstance, NULL);
   otEXPECT_ACTION(message != NULL, error = OT_ERROR_NO_BUFS);
 
-  error = otMessageAppend(message, messageString, sizeof(messageString));
+  error = otMessageAppend(message, messageString, strlen(messageString));
   otEXPECT(error == OT_ERROR_NONE);
 
   error = otUdpSend(&sUdpSocket, message, &messageInfo);
