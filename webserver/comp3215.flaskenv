@@ -1,0 +1,1 @@
+FLASK_APP=comp3215.py
