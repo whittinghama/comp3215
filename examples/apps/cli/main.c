@@ -43,6 +43,7 @@
 #include <openthread/ip6.h>
 #include <openthread/udp.h>
 #include <openthread/message.h>
+#include <openthread/dataset.h>
 
 #include "openthread-system.h"
 #include "utils/code_utils.h"
@@ -57,11 +58,18 @@ static void sendUdp(otInstance *aInstance, otIp6Address destIp, char *messageStr
 
 static otUdpSocket sUdpSocket;
 otInstance *instance;
+static int LEDstates[4];
+static int hostLED;
 
 int getLEDnum(void); // Board function to determine which LED number this board is set to
 void connectCheck(int argc, char *argv[]); // Server startup command for server to check what LEDs are connected
 void ledOn(int argc, char *argv[]); // Server command to turn an LED on
 void ledOff(int argc, char *argv[]); // Server command to turn an LED off
+void connectreply(int argc, char *argv[]){
+  OT_UNUSED_VARIABLE(argc);
+  OT_UNUSED_VARIABLE(argv);
+  otCliOutputFormat("STATE,%d,%d%d%d%d,\n\r",hostLED,LEDstates[0],LEDstates[1],LEDstates[2],LEDstates[3]);
+}
 
 #if OPENTHREAD_EXAMPLES_POSIX
 #include <setjmp.h>
@@ -133,6 +141,12 @@ pseudo_reset:
     initUdp(instance);
 
     otLinkSetPanId(instance,0xa420);
+    otLinkSetChannel(instance,15);
+    otMasterKey realkey;
+    for(int byte = 0;byte<16;byte++){
+      realkey.m8[byte]= 0x96;
+    }
+    otThreadSetMasterKey(instance,&realkey); // Randomly generated, ensures all boards running this code will connect
     otIp6SetEnabled(instance,true);
     otThreadSetEnabled(instance,true);
 
@@ -141,8 +155,9 @@ pseudo_reset:
       {"LEDON",&ledOn},
       {"LEDOFF",&ledOff},
       {"CONCHECK",&connectCheck},
+      {"CONREPLY",&connectreply},
     };
-    otCliSetUserCommands(commands,3);
+    otCliSetUserCommands(commands,4);
 
     otSetStateChangedCallback(instance, handleNetifStateChanged, instance);
 
@@ -233,7 +248,7 @@ void handleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *
   }
   else if(strncmp(recvBuffer,"con",3) == 0){
     int lednum = recvBuffer[3] - '0';
-    otCliOutputFormat("CON%d\n\r",lednum);
+    LEDstates[lednum-1] = 1;
   }
 }
 
@@ -287,11 +302,16 @@ int getLEDnum(void){
 void connectCheck(int argc, char *argv[]){
   OT_UNUSED_VARIABLE(argc);
   OT_UNUSED_VARIABLE(argv);
+  for(int i =0;i<4;i++){
+    LEDstates[i] = 0;
+  }
+  hostLED = 0;
   otIp6Address destAddr;
   otIp6AddressFromString(UDP_MULTICAST, &destAddr);
   sendUdp(instance,destAddr,"connectcheck");
   int lednum = getLEDnum(); // Get this boards LED num to send back
-  otCliOutputFormat("> CON%d\n\r",lednum);
+  LEDstates[lednum-1] = 1;
+  hostLED = lednum;
 }
 
 void ledOn(int argc, char *argv[]){
