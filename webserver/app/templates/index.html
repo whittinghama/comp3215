@@ -7,7 +7,8 @@
 	<!-- FAVICON FROM https://favicon.io/ -->
 </head>
   <body onload="initialise()">
-    <h1>COMP3215</h1>
+  	<button style ="float:right" class="button button3" onClick="window.location.reload();">Poll Network</button>
+    <h1>COMP3215</h1> 
     <p>This is a simple webpage to control 4 LEDs</p>
     <h6>The host and state of the LEDs can be seen below</h6>
     <div class="row">
@@ -73,6 +74,14 @@ h5.offline{color:#CA002A;}
   border: 2px solid #000000;
 }
 
+.button3 {
+  background-color: white; 
+  color: black; 
+  border: 2px solid #000000;
+}
+
+
+
 .button1:hover {
   background-color: #9900CC;
   color: white;
@@ -80,6 +89,11 @@ h5.offline{color:#CA002A;}
 
 .button2:hover {
   background-color: #CCCCFF;
+  color: white;
+}
+
+.button3:hover {
+  background-color: #657fc8;
   color: white;
 }
 
@@ -142,10 +156,35 @@ h5.offline{color:#CA002A;}
                     var id=data.id;
                     var state=data.state;
                     var onlineoffline = data.onlineoffline;
+                    var host = data.host;
                     if (reply=="success")
                     {
                         //document.getElementById("message").innerHTML = "You pressed button number: " + id + " with state " + state ;
                         set_states(onlineoffline);
+                        if( host == "1"){
+							document.getElementById("led1title").innerHTML = "LED1: Host";
+							document.getElementById("led2title").innerHTML = "LED2";
+							document.getElementById("led3title").innerHTML = "LED3";
+							document.getElementById("led4title").innerHTML = "LED4";
+						}
+						if( host == "2"){
+							document.getElementById("led1title").innerHTML = "LED1";
+							document.getElementById("led2title").innerHTML = "LED2: Host";
+							document.getElementById("led3title").innerHTML = "LED3";
+							document.getElementById("led4title").innerHTML = "LED4";
+						}
+						if( host == "3"){
+							document.getElementById("led1title").innerHTML = "LED1";
+							document.getElementById("led2title").innerHTML = "LED2";
+							document.getElementById("led3title").innerHTML = "LED3: Host";
+							document.getElementById("led4title").innerHTML = "LED4";
+						}
+						if( host == "4"){
+							document.getElementById("led1title").innerHTML = "LED1";
+							document.getElementById("led2title").innerHTML = "LED2";
+							document.getElementById("led3title").innerHTML = "LED3";
+							document.getElementById("led4title").innerHTML = "LED4: Host";
+						}
                     }
                     else
                         {
